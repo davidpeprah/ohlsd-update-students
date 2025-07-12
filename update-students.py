@@ -70,8 +70,8 @@ def get_new_student_data():
             sys.exit(0)
     else:
         base_folder = r'config\sample_student_data'
-        if not os.path.exists(base_folder):
-            os.makedirs(rf"{base_folder}\{date}")
+        if not os.path.exists(rf"{base_folder}\{date}"):
+            os.mkdir(rf"{base_folder}\{date}")
         # For testing purposes, use a sample file path
         abs_folder_path = rf'{base_folder}\StudentCreated.csv'
         if not os.path.exists(abs_folder_path):
