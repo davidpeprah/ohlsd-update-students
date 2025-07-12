@@ -51,6 +51,7 @@ def get_new_student_data():
     # get yesterday's date
     yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
     date = yesterday.strftime("%m-%d-%Y")
+    cc = adminEmail
 
     if not args.testing:
         if not config.get('general', 'dataFolder'):
@@ -79,6 +80,7 @@ def get_new_student_data():
         if not os.path.exists(abs_folder_path):
             logger.CRITICAL(f"Sample file does not exist: {abs_folder_path}")
             sys.exit(1)
+        cc = sysadmin
 
 
     csv_headers = config.get('general', 'csvFileHeaders')
@@ -136,7 +138,7 @@ def get_new_student_data():
             secretary_email = [email.strip() for email in secretary_email.split(',')]
             # join the emails back with comma separator
             secretary_email = ','.join(secretary_email)
-
+                
             # Send email notification to building secretaries with a summary of the students
             send_email_notification(recipient=secretary_email, 
                                     subject=f"New Students Created for {building_name} on {date}",
@@ -144,12 +146,13 @@ def get_new_student_data():
                                     file_name=output_file_name,
                                     template_name='new_students_email_template.html',
                                     with_attachment=True,
-                                    message=f"Please find attached the list of new students created for {building_name} on {date}.")    
+                                    message=f"Please find attached the list of new students created for {building_name} on {date}.",
+                                    cc=cc)    
         except Exception as e:
             logger.exception(f"Error writing to CSV file {output_location}: {e}")
 
         
-def send_email_notification(recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION"):
+def send_email_notification(recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION", cc: str = None):
     
     if recipient:
 
@@ -168,7 +171,7 @@ def send_email_notification(recipient: str = None, subject: str = " ", file_path
                 logger.debug(f"Email recipient: {recipient}")
                 try:
                     send_email_message = send_email.sendMessage('me', send_email.CreateMessageWithAttachment(serviceAccount, recipient, 
-                                                                                subject, rendered_email, file_dir=file_path, filename=file_name, cc=adminEmail))
+                                                                                subject, rendered_email, file_dir=file_path, filename=file_name, cc=cc))
                   
                 except Exception as e:
                     logger.exception(f"Failed to send email notification with attachment: {e}")
@@ -221,7 +224,7 @@ if __name__ == "__main__":
 
     logLevel = config.get('logs', 'logLevel' , fallback='INFO')
     logType = config.get('logs', 'logType', fallback='FILE')
-    logFile = config.get('logs', 'logFile', fallback='logs\update-students.log')
+    logFile = config.get('logs', 'logFile', fallback=r'logs\\update-students.log')
     
     serviceAccount = config.get('admin', 'serviceAccEmail')
 
