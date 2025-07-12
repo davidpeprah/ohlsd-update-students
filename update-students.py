@@ -63,7 +63,7 @@ def get_new_student_data():
             sys.exit(1)
 
         
-        abs_folder_path = f"{base_folder}\{date}\StudentCreated.csv"
+        abs_folder_path = rf"{base_folder}\{date}\StudentCreated.csv"
         # Check if the file exists
         if not os.path.exists(abs_folder_path):
             logging.info(f"No new Student Created {abs_folder_path}")
@@ -71,7 +71,7 @@ def get_new_student_data():
     else:
         base_folder = r'config\sample_student_data'
         if not os.path.exists(base_folder):
-            os.makedirs(f"{base_folder}\{date}")
+            os.makedirs(rf"{base_folder}\{date}")
         # For testing purposes, use a sample file path
         abs_folder_path = rf'{base_folder}\StudentCreated.csv'
         if not os.path.exists(abs_folder_path):
@@ -222,7 +222,7 @@ if __name__ == "__main__":
     parser.add_argument('-lF', '--logFile', default=None, type=str, help='Set the logging file path')
     parser.add_argument('-rp', '--reset_password', action='store_true', help='Reset student passwords')
     parser.add_argument('-u', '--username', type=str, help='Username of the student to update')
-    parser.add_argument('-t', '--testing', type=str, action='store_true', help='For testing purposes only, do not use in production')
+    parser.add_argument('-t', '--testing', action='store_true', help='For testing purposes only, do not use in production')
 
     args = parser.parse_args()
 
