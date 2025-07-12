@@ -6,11 +6,13 @@ param (
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
-function generate-password {
+function generatePassword {
     param (
         [int]$length = 14
     )
-    $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$-"
+    $chars = ('a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+            'w','x','y','z','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S',
+            'T','U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9','@','#','$','-')
     $password = -join ((1..$length) | ForEach-Object { $chars | Get-Random -Count 1 })
     return $password
 }
@@ -26,7 +28,7 @@ function Write-Log {
 
 
 try {
-    password = generate-password -length 14
+    $password = $generatePassword -length 14
     # Check if the user exists in Active Directory
     $user = Get-ADUser -Filter {samAccountName -eq $username } | Select -ExpandProperty samAccountName
     if ($null -eq $user) {
@@ -37,8 +39,9 @@ try {
 
     # Reset the user's password
     Set-ADAccountPassword -Identity $user -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $NewPassword -Force)
+    $displayName = Get-ADUser -Filter {samAccountName -eq $username } | Select-Object -ExpandProperty DisplayName
     Write-Log "Password for user $username has been reset successfully." -ForegroundColor Green
-    return ("success", "Password reset successfully.")
+    return ("success", "$displayName,$password")
 } catch {
     Write-Log "An error occurred: $_" -ForegroundColor Red
     return ("Failed", "An error occurred:  $_")

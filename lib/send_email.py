@@ -84,7 +84,7 @@ def CreateMessage(sender, to, subject, message_text,cc=None):
   return {'raw': b64_string}
 
 
-def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir,filename, cc=None, bcc=None):
+def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir=None, filename=None, cc=None, bcc=None):
   """Create a message for an email.
 
   Args:
@@ -107,6 +107,10 @@ def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir,file
 
   msg = MIMEText(message_text, "html")
   message.attach(msg)
+
+  # If no file_dir or filename is provided, return the message without attachment
+  if file_dir is None or filename is None: return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
+
 
   path = os.path.join(file_dir, filename)
   content_type, encoding = mimetypes.guess_type(path)

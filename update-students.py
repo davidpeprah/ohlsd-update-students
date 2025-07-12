@@ -16,15 +16,42 @@ env = Environment(loader=FileSystemLoader('templates'))
 
 
 # Function to reset student password
-def reset_student_password(username: str):
+def reset_student_password(username: str, building: str):
     """
     Function to reset a student's password.
     This function calls the PowerShell script to reset the password.
     """
+    building_short_names = {
+        'RRMS': 'Rapid Run Middle School', 
+        'TDS': 'Test Dummy School',
+        'SPG': 'Charles W. Springmyer Elementary',
+        'OHHS': 'Oak Hills High School',
+        'JFD': 'John Foster Dulles Elementary',
+        'COH': 'C.O. Harrison Elementary',
+        'DEL': 'Delshire Elementary',
+        'OAK': 'Oakdale Elementary',
+        'BMS': 'Bridgetown Middle School',
+        'DMS': 'Delhi Middle School'
+    }
+    
     try:
         import subprocess
+
+        cc = adminEmail
+
+
+        if args.testing:
+            # For testing purposes, simulate the password reset
+            username = 'test_user'
+            logger.debug(f"Simulating password reset for student: {username}")
+            building = 'TDS'
+            cc = sysadmin
+
+
+        logger.info(f"Resetting password for student: {username}")
+
         # Call the PowerShell script with the username as an argument
-        result = subprocess.run(['powershell.exe', '-ExecutionPolicy', 'Bypass', '-File', 'lib\reset_password.ps1', '-username', username], capture_output=True, text=True)
+        result = subprocess.run(['powershell.exe', '-ExecutionPolicy', 'Bypass', '-File', r'lib\\reset_password.ps1', '-username', username], capture_output=True, text=True)
         
         # Read Information from Powershell
         message = str(result.communicate()[0][:-2], 'utf-8')
@@ -33,14 +60,29 @@ def reset_student_password(username: str):
 
         if status == "Success":
             logger.info(f"Password reset successfully for student: {username}")
-            return True
+            displayName, password = update.split(',')
+           
+            # get building secretary email from config
+            building_name = building_short_names.get(building.upper(), None)
+            secretary_email = config.get('BuildingSecretariesEmails', building_name, fallback=adminEmail)
+            
+            # get data for email notification
+            data = {"Fullname": displayName.strip(), "Username": username, "Password": password.strip(), "building": building_name}
+            
+            # Send email notification to the building secretary
+            send_email_notification(data=data, 
+                                    recipient=secretary_email,
+                                    subject=f"Password Reset Notification for {displayName.strip()}",
+                                    template_name='password_reset_email_template.html',
+                                    message=f"The password for student {username} has been reset successfully.",
+                                    cc=cc)
         else:
-            logger.error(f"Failed to reset password for student {username}: {update}")
-            return False
+                logger.error(f"Failed to reset password for student {username}: {update}")
+            
         
     except Exception as e:
         logger.error(f"An error occurred while resetting password: {e}")
-        return False
+    
 
 
 def get_new_student_data():
@@ -152,7 +194,7 @@ def get_new_student_data():
             logger.exception(f"Error writing to CSV file {output_location}: {e}")
 
         
-def send_email_notification(recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION", cc: str = None):
+def send_email_notification(data: dict = None, recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION", cc: str = None):
     
     if recipient:
 
@@ -162,11 +204,10 @@ def send_email_notification(recipient: str = None, subject: str = " ", file_path
             if file_path and file_name and template_name:
                
                 email_template = env.get_template(template_name)
-                subject = subject
-                rendered_email = email_template.render()
+                rendered_email = email_template.render(data)
 
                 # Function to send email notification
-                logger.info("Sending email notification with attachment subject: {subject} ...")
+                logger.info(f"Sending email notification with attachment subject: {subject} ...")
                 logger.debug(f"Email subject: {subject}")
                 logger.debug(f"Email recipient: {recipient}")
                 try:
@@ -177,13 +218,22 @@ def send_email_notification(recipient: str = None, subject: str = " ", file_path
                     logger.exception(f"Failed to send email notification with attachment: {e}")
             
             else:
-                logger.critical("File path, file name or template name not provided for email notification with attachment")
-            
-            
+                logger.critical("File path, file name or template name not provided for email notification with attachment")   
         else:
+            if not template_name:
+                logger.critical("Email template name not provided for email notification without attachment")
+                return
+            
+            email_template = env.get_template(template_name)
+            rendered_email = email_template.render(data)
+
+            # Function to send email notification
+            logger.info(f"Sending email notification without attachment subject: {subject} ...")
+            logger.debug(f"Email subject: {subject}")
+            logger.debug(f"Email recipient: {recipient}")
             try:
-                send_email_message = send_email.sendMessage('me', send_email.CreateMessage(serviceAccount, recipient, 
-                                                                                    subject, message))
+                send_email_message = send_email.sendMessage('me', send_email.CreateMessageWithAttachment(serviceAccount, recipient, 
+                                                                                    subject, rendered_email))
             except Exception as e:
                 logger.exception(f"Failed to send email notification: {e}")
 
@@ -239,6 +289,7 @@ if __name__ == "__main__":
     parser.add_argument('-lF', '--logFile', default=None, type=str, help='Set the logging file path')
     parser.add_argument('-rp', '--reset_password', action='store_true', help='Reset student passwords')
     parser.add_argument('-u', '--username', type=str, help='Username of the student to update')
+    parser.add_argument('-b', '--building', type=str, help='Student building name for email notification use => [RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS]')   
     parser.add_argument('-t', '--testing', action='store_true', help='For testing purposes only, do not use in production')
 
     args = parser.parse_args()
@@ -255,7 +306,16 @@ if __name__ == "__main__":
         if not args.username:
             logging.CRITICAL('Username must be provided when resetting password.')
             sys.exit(1)
-      
+
+        if args.building:
+            if not re.match(r'^[a-zA-Z\s]+$', args.building):
+                logging.CRITICAL('Building name must contain only letters and spaces.')
+                sys.exit(1)
+            
+            if args.building.upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
+                logging.CRITICAL(f"Invalid building name: {args.building.upper()}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
+                sys.exit(1)
+        
 
     numeric_level = getattr(logging, logLevel)
     if not isinstance(numeric_level, int):
