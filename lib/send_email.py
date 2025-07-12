@@ -84,7 +84,7 @@ def CreateMessage(sender, to, subject, message_text,cc=None):
   return {'raw': b64_string}
 
 
-def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir,filename):
+def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir,filename, cc=None, bcc=None):
   """Create a message for an email.
 
   Args:
@@ -101,6 +101,8 @@ def CreateMessageWithAttachment(sender, to, subject, message_text, file_dir,file
   message = MIMEMultipart()
   message['to'] = to
   message['from'] = sender
+  message['cc'] = cc
+  message['bcc'] = bcc
   message['subject'] = subject
 
   msg = MIMEText(message_text, "html")

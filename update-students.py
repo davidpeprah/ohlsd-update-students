@@ -29,16 +29,17 @@ def reset_student_password(username: str):
         # Read Information from Powershell
         message = str(result.communicate()[0][:-2], 'utf-8')
         status, update = message.split('\r\n')
+        logger.debug(f"PowerShell script output: {message}")
 
         if status == "Success":
-            logging.info(f"Password reset successfully for student: {username}")
+            logger.info(f"Password reset successfully for student: {username}")
             return True
         else:
-            logging.error(f"Failed to reset password for student {username}: {update}")
+            logger.error(f"Failed to reset password for student {username}: {update}")
             return False
         
     except Exception as e:
-        logging.error(f"An error occurred while resetting password: {e}")
+        logger.error(f"An error occurred while resetting password: {e}")
         return False
 
 
@@ -53,49 +54,51 @@ def get_new_student_data():
 
     if not args.testing:
         if not config.get('general', 'dataFolder'):
-            logging.CRITICAL("Data folder path is not configured in the config file.")
+            logger.CRITICAL("Data folder path is not configured in the config file.")
             sys.exit(1)
 
         # check if the folder exists
         base_folder = config.get('general', 'dataFolder')
         if not os.path.exists(base_folder):
-            logging.error(f"Folder does not exist: {base_folder}")
+            logger.error(f"Folder does not exist: {base_folder}")
             sys.exit(1)
 
         
         abs_folder_path = rf"{base_folder}\{date}\StudentCreated.csv"
         # Check if the file exists
         if not os.path.exists(abs_folder_path):
-            logging.info(f"No new Student Created {abs_folder_path}")
+            logger.info(f"No new Student Created {abs_folder_path}")
             sys.exit(0)
     else:
         base_folder = r'config\sample_student_data'
         if not os.path.exists(rf"{base_folder}\{date}"):
+            logger.debug(f"Creating folder for date: {date}")
             os.mkdir(rf"{base_folder}\{date}")
         # For testing purposes, use a sample file path
         abs_folder_path = rf'{base_folder}\StudentCreated.csv'
         if not os.path.exists(abs_folder_path):
-            logging.CRITICAL(f"Sample file does not exist: {abs_folder_path}")
+            logger.CRITICAL(f"Sample file does not exist: {abs_folder_path}")
             sys.exit(1)
 
 
     csv_headers = config.get('general', 'csvFileHeaders')
     if not csv_headers:
-        logging.CRITICAL("CSV file headers are not configured in the config file.")
+        logger.CRITICAL("CSV file headers are not configured in the config file.")
         sys.exit(1)
 
     csv_headers = csv_headers.split(',')
-
+    logger.debug(f"CSV Headers: {csv_headers}")
 
     # Read the data from the file
     with open(abs_folder_path, 'r', encoding='utf-8') as csv_file:
+        logger.debug(f"Reading data from {abs_folder_path}")
         reader = csv.DictReader(csv_file)
         # Skip the header row
         next(reader)
         data = [row for row in reader]
 
     if not data:
-        logging.info(f"No new student data found in {abs_folder_path}")
+        logger.info(f"No new student data found in {abs_folder_path}")
         sys.exit(0)
 
     # Create a dictionary to hold students grouped by building
@@ -121,9 +124,19 @@ def get_new_student_data():
                 writer.writeheader()
                 for student in students_building[building_name]:
                     writer.writerow(student)
-            logging.info(f"Exported {len(students_building[building_name])} students to {output_location} successfully.")
+            logger.info(f"Exported {len(students_building[building_name])} students to {output_location} successfully.")
 
             secretary_email = config.get('BuildingSecretariesEmails', building_name, fallback=adminEmail)
+            logger.debug(f"Building: {building_name}, Secretary Email: {secretary_email}")
+            if not secretary_email:
+                logger.error(f"No email configured for building: {building_name}. Skipping email notification.")
+                continue
+
+            # remove any new line characters from the email address
+            secretary_email = [email.strip() for email in secretary_email.split(',')]
+            # join the emails back with comma separator
+            secretary_email = ','.join(secretary_email)
+
             # Send email notification to building secretaries with a summary of the students
             send_email_notification(recipient=secretary_email, 
                                     subject=f"New Students Created for {building_name} on {date}",
@@ -133,7 +146,7 @@ def get_new_student_data():
                                     with_attachment=True,
                                     message=f"Please find attached the list of new students created for {building_name} on {date}.")    
         except Exception as e:
-            logging.exception(f"Error writing to CSV file {output_location}: {e}")
+            logger.exception(f"Error writing to CSV file {output_location}: {e}")
 
         
 def send_email_notification(recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION"):
@@ -150,11 +163,12 @@ def send_email_notification(recipient: str = None, subject: str = " ", file_path
                 rendered_email = email_template.render()
 
                 # Function to send email notification
-                logger.info("Sending email notification...")
-            
+                logger.info("Sending email notification with attachment subject: {subject} ...")
+                logger.debug(f"Email subject: {subject}")
+                logger.debug(f"Email recipient: {recipient}")
                 try:
                     send_email_message = send_email.sendMessage('me', send_email.CreateMessageWithAttachment(serviceAccount, recipient, 
-                                                                                subject, rendered_email, file_dir=file_path, filename=file_name))
+                                                                                subject, rendered_email, file_dir=file_path, filename=file_name, cc=adminEmail))
                   
                 except Exception as e:
                     logger.exception(f"Failed to send email notification with attachment: {e}")
@@ -207,7 +221,7 @@ if __name__ == "__main__":
 
     logLevel = config.get('logs', 'logLevel' , fallback='INFO')
     logType = config.get('logs', 'logType', fallback='FILE')
-    logFile = config.get('logs', 'logFile', fallback='update-students.log')
+    logFile = config.get('logs', 'logFile', fallback='logs\update-students.log')
     
     serviceAccount = config.get('admin', 'serviceAccEmail')
 
@@ -242,7 +256,8 @@ if __name__ == "__main__":
 
     numeric_level = getattr(logging, logLevel)
     if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % logLevel)
+        logging.CRITICAL(f"Invalid log level: {logLevel}")
+        sys.exit(1)
 
     if logType == 'FILE':
         logging.basicConfig(level=numeric_level, 
