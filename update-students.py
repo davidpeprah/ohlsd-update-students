@@ -15,13 +15,6 @@ from lib import send_email
 env = Environment(loader=FileSystemLoader('templates'))
 
 
-# Check log file and create it if it does not exist
-def check_log_file(filepath: str):
-    if not os.path.exists(filepath):
-        os.makedirs(os.path.dirname(filepath))
-        with open(fr"{filepath}", "w") as file: pass
-
-
 # Function to reset student password
 def reset_student_password(username: str):
     """
@@ -143,8 +136,6 @@ def get_new_student_data():
             logging.exception(f"Error writing to CSV file {output_location}: {e}")
 
         
-
-
 def send_email_notification(recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION"):
     
     if recipient:
@@ -224,7 +215,6 @@ if __name__ == "__main__":
     sysadmin = config.get('admin', 'sysadmin', fallback='dpeprah@vartek.com')
     adminEmail = config.get('admin', 'adminEmail', fallback=sysadmin)
 
-    check_log_file(logFile)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-lL', '--logLevel', default=None, type=str, help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
@@ -258,7 +248,7 @@ if __name__ == "__main__":
         logging.basicConfig(level=numeric_level, 
                             format="{asctime} - {levelname} - {message}", 
                             style="{", 
-                            filemode='a', 
+                            filemode='a+', 
                             filename=logFile,
                             encoding="utf-8",
                             datefmt="%Y-%m-%d %H:%M:%S")
