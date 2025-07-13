@@ -326,13 +326,11 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=numeric_level, 
                         format="{asctime} - {levelname} - {message}", 
-                        style="{", 
-                        filename=logFile,
-                        encoding="utf-8",
+                        style="{",
                         datefmt="%Y-%m-%d %H:%M:%S",
                         handlers=[ logging.FileHandler(filename=logFile, mode='a+', encoding='utf-8'),
                                     logging.StreamHandler()
-                        ]
+                                ]
                 )
         
     logger = logging.getLogger(__name__)
