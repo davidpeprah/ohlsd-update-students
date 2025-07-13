@@ -57,9 +57,11 @@ def reset_student_password(username: str, building: str):
         
         # Read Information from Powershell
         message = str(result.communicate()[0][:-2], 'utf-8')
-        status, update = message.split('\r\n')
         logger.debug(f"PowerShell script output: {message}")
-
+        status, update = message.split('\r\n')
+        logger.debug(f"Status: {status}, Update: {update}")
+        
+        # Check if the status is success
         if status == "success":
             logger.info(f"Password reset successfully for student: {username}")
             displayName, password = update.split(',')
@@ -81,11 +83,22 @@ def reset_student_password(username: str, building: str):
                                     template_name='password_reset_email_template.html',
                                     cc=cc)
         else:
-                logger.error(f"Failed to reset password for student {username}: {update}")
-            
+            logger.error(f"Failed to reset password for student {username}: {update}")
+            send_email_notification(data={"error_message": f"Password Reset Failed for {username} at {building} \n {update}",
+                                          "error_file": "reset_password.ps1",
+                                          "error_timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                                    recipient=sysadmin,
+                                    subject=f"Password Reset Failed for {username}",
+                                    template_name='error_email_template.html')
         
     except Exception as e:
         logger.error(f"An error occurred while resetting password: {e}")
+        send_email_notification(data={"error_message": f"Error occured while resetting password for {username} at {building} \n {str(e)}",
+                                      "error_file": "reset_student_password function",
+                                      "error_timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                                recipient=sysadmin,
+                                subject=f"Error in Password Reset Function",
+                                template_name='error_email_template.html')
     
 
 def get_new_student_data():
@@ -195,6 +208,14 @@ def get_new_student_data():
                                     cc=cc)    
         except Exception as e:
             logger.exception(f"Error writing to CSV file {output_location}: {e}")
+            # Function to send email notification
+            send_email_notification(data={"error_message": f"Error writing to CSV file {output_location} \n {str(e)}",
+                                          "error_file": "get_new_student_data function",
+                                          "other_info": students_building[building_name],
+                                          "error_timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
+                                    recipient=sysadmin,
+                                    subject=f"Error in Student Data Export for {building_name}",
+                                    template_name='error_email_template.html')
 
         
 def send_email_notification(data: dict = None, recipient: str = None, subject: str = " ", file_path: str = None, file_name: str = None, template_name: str = None, with_attachment: bool = False, message: str = "TESTING EMAIL NOTIFICATION", cc: str = None):
@@ -253,16 +274,14 @@ def send_email_notification(data: dict = None, recipient: str = None, subject: s
 
 
 def main():
-    
-    logger = logging.getLogger(__name__)
 
     if (args.reset_password):
-        logger.info(f'Resetting password for student: {args.username}')
-        # Here you would add the logic to reset the student's password
-        # For example, call a function to reset the password
+        
         reset_student_password(args.username, args.building.upper())
+
     else:
-        get_new_student_data() # Placeholder for other functionalities
+
+        get_new_student_data() 
 
 
 
@@ -274,10 +293,11 @@ if __name__ == "__main__":
     if not config.sections():
         logging.CRITICAL("Configuration file is empty or not found.")
         sys.exit(1)
-
+   
+    
     logLevel = config.get('logs', 'logLevel' , fallback='INFO')
-    logType = config.get('logs', 'logType', fallback='FILE')
     logFile = config.get('logs', 'logFile', fallback=r'logs\\update-students.log')
+    
     
     serviceAccount = config.get('admin', 'serviceAccEmail')
 
@@ -286,10 +306,9 @@ if __name__ == "__main__":
     adminEmail = config.get('admin', 'adminEmail', fallback=sysadmin)
 
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(prog='update-students',
+                                     description='Update student accounts and send notifications to building secretaries.')
     parser.add_argument('-lL', '--logLevel', default=None, type=str, help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
-    parser.add_argument('-lT', '--logType', default=None, type=str, help='Set the logging output (CONSOLE, FILE)')
-    parser.add_argument('-lF', '--logFile', default=None, type=str, help='Set the logging file path')
     parser.add_argument('-rp', '--reset_password', action='store_true', help='Reset student passwords')
     parser.add_argument('-u', '--username', type=str, help='Username of the student to update')
     parser.add_argument('-b', '--building', type=str, help='Student building name for email notification use => [RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS]')   
@@ -298,47 +317,39 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     logLevel = args.logLevel.upper() if args.logLevel else logLevel.upper()
-    logType = args.logType.upper() if args.logType else logType.upper()
-    logFile = args.logFile if args.logFile else logFile
-    if logType not in ['CONSOLE', 'FILE']:
-        logging.CRITICAL('Invalid log type: %s' % logType)
-        sys.exit(1)
-    
-    
-    if args.reset_password:
-        if not args.username:
-            logging.CRITICAL('Username must be provided when resetting password.')
-            sys.exit(1)
 
-        if args.building:
-            if not re.match(r'^[a-zA-Z\s]+$', args.building):
-                logging.CRITICAL('Building name must contain only letters and spaces.')
-                sys.exit(1)
-            
-            if args.building.upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
-                logging.CRITICAL(f"Invalid building name: {args.building.upper()}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
-                sys.exit(1)
-        
-
+    # Set up logging configuration
     numeric_level = getattr(logging, logLevel)
     if not isinstance(numeric_level, int):
         logging.CRITICAL(f"Invalid log level: {logLevel}")
         sys.exit(1)
 
-    if logType == 'FILE':
-        logging.basicConfig(level=numeric_level, 
-                            format="{asctime} - {levelname} - {message}", 
-                            style="{", 
-                            filemode='a+', 
-                            filename=logFile,
-                            encoding="utf-8",
-                            datefmt="%Y-%m-%d %H:%M:%S")
-    elif logType == 'CONSOLE':
-        logging.basicConfig(level=numeric_level, 
-                            format="{asctime} - {levelname} - {message}", 
-                            style="{", 
-                            encoding="utf-8",
-                            datefmt="%Y-%m-%d %H:%M")
+    logging.basicConfig(level=numeric_level, 
+                        format="{asctime} - {levelname} - {message}", 
+                        style="{", 
+                        filename=logFile,
+                        encoding="utf-8",
+                        datefmt="%Y-%m-%d %H:%M:%S",
+                        handlers=[ logging.FileHandler(filename=logFile, mode='a+', encoding='utf-8'),
+                                    logging.StreamHandler()
+                        ]
+                )
+        
     logger = logging.getLogger(__name__)
 
+    
+    if args.reset_password:
+        if not args.username:
+            logger.CRITICAL('Username must be provided when resetting password.')
+            sys.exit(1)
+
+        if args.building:
+            if not re.match(r'^[a-zA-Z\s]+$', args.building):
+                logger.CRITICAL('Building name must contain only letters and spaces.')
+                sys.exit(1)
+            
+            if args.building.upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
+                logger.CRITICAL(f"Invalid building name: {args.building.upper()}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
+                sys.exit(1)
+        
     main()
