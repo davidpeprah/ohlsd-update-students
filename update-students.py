@@ -341,13 +341,16 @@ if __name__ == "__main__":
             logger.CRITICAL('Username must be provided when resetting password.')
             sys.exit(1)
 
-        if args.building:
-            if not re.match(r'^[a-zA-Z\s]+$', args.building):
-                logger.CRITICAL('Building name must contain only letters and spaces.')
-                sys.exit(1)
+        if not args.building:
+            logger.CRITICAL('Building name must be provided when resetting password.')
+            sys.exit(1)
             
-            if args.building.upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
-                logger.CRITICAL(f"Invalid building name: {args.building.upper()}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
-                sys.exit(1)
+        if not re.match(r'^[a-zA-Z]+$', args.building):
+            logger.CRITICAL('Building name must contain only letters')
+            sys.exit(1)
+        
+        if str(args.building).upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
+            logger.CRITICAL(f"Invalid building name: {args.building}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
+            sys.exit(1)
         
     main()
