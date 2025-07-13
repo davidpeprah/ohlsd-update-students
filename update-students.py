@@ -51,7 +51,9 @@ def reset_student_password(username: str, building: str):
         logger.info(f"Resetting password for student: {username}")
 
         # Call the PowerShell script with the username as an argument
-        result = subprocess.run(['powershell.exe', '-ExecutionPolicy', 'Bypass', '-File', r'lib\\reset_password.ps1', '-username', username], capture_output=True, text=True)
+        result = subprocess.Popen(['powershell.exe', '-ExecutionPolicy', 
+                                   'Bypass', '-File', r'lib\\reset_password.ps1', 
+                                   '-username', username], stdout=subprocess.PIPE)
         
         # Read Information from Powershell
         message = str(result.communicate()[0][:-2], 'utf-8')
@@ -74,7 +76,6 @@ def reset_student_password(username: str, building: str):
                                     recipient=secretary_email,
                                     subject=f"Password Reset Notification for {displayName.strip()}",
                                     template_name='password_reset_email_template.html',
-                                    message=f"The password for student {username} has been reset successfully.",
                                     cc=cc)
         else:
                 logger.error(f"Failed to reset password for student {username}: {update}")
@@ -182,13 +183,13 @@ def get_new_student_data():
             secretary_email = ','.join(secretary_email)
                 
             # Send email notification to building secretaries with a summary of the students
-            send_email_notification(recipient=secretary_email, 
+            send_email_notification(data={"building": building_name, "date": date, "students_count": len(students_building[building_name])},
+                                    recipient=secretary_email, 
                                     subject=f"New Students Created for {building_name} on {date}",
                                     file_path=os.path.join(base_folder, date),
                                     file_name=output_file_name,
                                     template_name='new_students_email_template.html',
                                     with_attachment=True,
-                                    message=f"Please find attached the list of new students created for {building_name} on {date}.",
                                     cc=cc)    
         except Exception as e:
             logger.exception(f"Error writing to CSV file {output_location}: {e}")
@@ -257,7 +258,7 @@ def main():
         logger.info(f'Resetting password for student: {args.username}')
         # Here you would add the logic to reset the student's password
         # For example, call a function to reset the password
-        reset_student_password(args.username)
+        reset_student_password(args.username, args.building.upper())
     else:
         get_new_student_data() # Placeholder for other functionalities
 

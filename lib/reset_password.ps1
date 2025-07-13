@@ -28,7 +28,7 @@ function Write-Log {
 
 
 try {
-    $password = $generatePassword -length 14
+    $NewPassword = generatePassword -length 14
     # Check if the user exists in Active Directory
     $user = Get-ADUser -Filter {samAccountName -eq $username } | Select -ExpandProperty samAccountName
     if ($null -eq $user) {
@@ -39,9 +39,9 @@ try {
 
     # Reset the user's password
     Set-ADAccountPassword -Identity $user -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $NewPassword -Force)
-    $displayName = Get-ADUser -Filter {samAccountName -eq $username } | Select-Object -ExpandProperty DisplayName
+    $displayName = Get-ADUser -Filter {samAccountName -eq $username } -Properties DisplayName | Select-Object -ExpandProperty DisplayName
     Write-Log "Password for user $username has been reset successfully." -ForegroundColor Green
-    return ("success", "$displayName,$password")
+    return ("success", "$displayName,$NewPassword")
 } catch {
     Write-Log "An error occurred: $_" -ForegroundColor Red
     return ("Failed", "An error occurred:  $_")
