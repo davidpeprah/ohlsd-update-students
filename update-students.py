@@ -113,7 +113,7 @@ def get_new_student_data():
 
     if not args.testing:
         if not config.get('general', 'dataFolder'):
-            logger.CRITICAL("Data folder path is not configured in the config file.")
+            logger.critical("Data folder path is not configured in the config file.")
             sys.exit(1)
 
         # check if the folder exists
@@ -143,7 +143,7 @@ def get_new_student_data():
 
     csv_headers = config.get('general', 'csvFileHeaders')
     if not csv_headers:
-        logger.CRITICAL("CSV file headers are not configured in the config file.")
+        logger.critical("CSV file headers are not configured in the config file.")
         sys.exit(1)
 
     csv_headers = csv_headers.split(',')
@@ -338,19 +338,19 @@ if __name__ == "__main__":
     
     if args.reset_password:
         if not args.username:
-            logger.CRITICAL('Username must be provided when resetting password.')
+            logger.critical('Username must be provided when resetting password.')
             sys.exit(1)
 
         if not args.building:
-            logger.CRITICAL('Building name must be provided when resetting password.')
+            logger.critical('Building name must be provided when resetting password.')
             sys.exit(1)
             
         if not re.match(r'^[a-zA-Z]+$', args.building):
-            logger.CRITICAL('Building name must contain only letters')
+            logger.critical('Building name must contain only letters')
             sys.exit(1)
         
         if str(args.building).upper() not in ['RRMS', 'TDS', 'SPG', 'OHHS', 'JFD', 'COH', 'DEL', 'OAK', 'BMS', 'DMS']:
-            logger.CRITICAL(f"Invalid building name: {args.building}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
+            logger.critical(f"Invalid building name: {args.building}. Must be one of: RRMS, TDS, SPG, OHHS, JFD, COH, DEL, OAK, BMS, DMS")
             sys.exit(1)
         
     main()
