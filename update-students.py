@@ -4,7 +4,7 @@
 #   Description: This script updates send new students data to the building secretaries
 #
 
-import os, re
+import os, re, pdb
 import sys
 from configparser import ConfigParser
 import logging, argparse, datetime, csv
@@ -42,7 +42,7 @@ def reset_student_password(username: str, building: str):
 
         if args.testing:
             # For testing purposes, simulate the password reset
-            username = 'test_user'
+            username = 'testuser'
             logger.debug(f"Simulating password reset for student: {username}")
             building = 'TDS'
             cc = sysadmin
@@ -60,7 +60,7 @@ def reset_student_password(username: str, building: str):
         status, update = message.split('\r\n')
         logger.debug(f"PowerShell script output: {message}")
 
-        if status == "Success":
+        if status == "success":
             logger.info(f"Password reset successfully for student: {username}")
             displayName, password = update.split(',')
            
@@ -68,11 +68,14 @@ def reset_student_password(username: str, building: str):
             building_name = building_short_names.get(building.upper(), None)
             secretary_email = config.get('BuildingSecretariesEmails', building_name, fallback=adminEmail)
             
-            # get data for email notification
-            data = {"Fullname": displayName.strip(), "Username": username, "Password": password.strip(), "building": building_name}
-            
+            # remove any new line characters from the email address
+            secretary_email = [email.strip() for email in secretary_email.split(',')]
+            # join the emails back with comma separator
+            secretary_email = ','.join(secretary_email)
+
+
             # Send email notification to the building secretary
-            send_email_notification(data=data, 
+            send_email_notification(data= {"Fullname": displayName.strip(), "Username": username, "Password": password.strip(), "building": building_name.upper()}, 
                                     recipient=secretary_email,
                                     subject=f"Password Reset Notification for {displayName.strip()}",
                                     template_name='password_reset_email_template.html',
@@ -84,7 +87,6 @@ def reset_student_password(username: str, building: str):
     except Exception as e:
         logger.error(f"An error occurred while resetting password: {e}")
     
-
 
 def get_new_student_data():
     """
@@ -183,7 +185,7 @@ def get_new_student_data():
             secretary_email = ','.join(secretary_email)
                 
             # Send email notification to building secretaries with a summary of the students
-            send_email_notification(data={"building": building_name, "date": date, "students_count": len(students_building[building_name])},
+            send_email_notification(data={"building": building_name.upper(), "date": date, "students_count": len(students_building[building_name])},
                                     recipient=secretary_email, 
                                     subject=f"New Students Created for {building_name} on {date}",
                                     file_path=os.path.join(base_folder, date),
