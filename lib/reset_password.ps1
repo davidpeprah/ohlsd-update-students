@@ -43,11 +43,11 @@ function wordlistPassword {
         return $false
         }
     $wordlist = get-content -Path $wordlistFile
-    $randomword = $wordlist | Get-Random -Count 1 }
+    $randomword = $wordlist | Get-Random -Count 1 
     $randomnumber = Get-Random -Minimum 100 -Maximum 999
     $password = "$randomword$randomnumber"
     return $password
-}   
+}
 
 
 function Write-Log {
