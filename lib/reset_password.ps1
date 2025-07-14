@@ -6,21 +6,6 @@ param (
 # Import the Active Directory module
 Import-Module ActiveDirectory
 
-function Get-IniContent ($filePath) {
-    $ini = @{}
-    switch -regex -file $filePath {
-        "^\\[(.+)\\]" { # Section header
-            $section = $matches[1]
-            $ini[$section] = @{}
-        }
-        "(.+?)\s*=(.*)" { # Key-value pair
-            $name,$value = $matches[1..2]
-            $ini[$section][$name] = $value
-        }
-    }
-    return $ini
-}
-
 
 function generatePassword {
     param (
@@ -35,7 +20,7 @@ function generatePassword {
 
 function wordlistPassword {
     param (
-        [string]$wordlistfile = "C:\scripts\Students\Password\WL.txt"
+        [string]$wordlistfile = "config\WL.txt"
     )
     
     if (-not (Test-Path -Path $wordlistFile)) {
