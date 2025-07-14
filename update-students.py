@@ -84,7 +84,7 @@ def reset_student_password(username: str, building: str):
                                     cc=cc)
         else:
             logger.error(f"Failed to reset password for student {username}: {update}")
-            send_email_notification(data={"error_message": f"Password Reset Failed for {username} at {building} \n {update}",
+            send_email_notification(data={"error_message": f"Password Reset Failed for {username} at {building_name} \n {update}",
                                           "error_file": "reset_password.ps1",
                                           "error_timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")},
                                     recipient=sysadmin,
