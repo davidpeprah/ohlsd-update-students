@@ -107,8 +107,8 @@ def get_new_student_data():
     This function can be implemented to fetch new student data from a source.
     """
     # get yesterday's date
-    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-    date = yesterday.strftime("%m-%d-%Y")
+    today = datetime.datetime.now()
+    date = today.strftime("%m-%d-%Y")
     cc = adminEmail
 
     if not args.testing:
@@ -153,8 +153,6 @@ def get_new_student_data():
     with open(abs_folder_path, 'r', encoding='utf-8') as csv_file:
         logger.debug(f"Reading data from {abs_folder_path}")
         reader = csv.DictReader(csv_file)
-        # Skip the header row
-        next(reader)
         data = [row for row in reader]
 
     if not data:
