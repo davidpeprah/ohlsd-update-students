@@ -60,20 +60,20 @@ def reset_student_password(username: str, building: str):
         logger.debug(f"PowerShell script output: {message}")
         status, update = message.split('\r\n')
         logger.debug(f"Status: {status}, Update: {update}")
+
+        # get building secretary email from config
+        building_name = building_short_names.get(building.upper(), None)
+        secretary_email = config.get('BuildingSecretariesEmails', building_name, fallback=adminEmail)
+
+        # remove any new line characters from the email address
+        secretary_email = [email.strip() for email in secretary_email.split(',')]
+        # join the emails back with comma separator
+        secretary_email = ','.join(secretary_email)
         
         # Check if the status is success
         if status == "success":
             logger.info(f"Password reset successfully for student: {username}")
             displayName, password = update.split(',')
-           
-            # get building secretary email from config
-            building_name = building_short_names.get(building.upper(), None)
-            secretary_email = config.get('BuildingSecretariesEmails', building_name, fallback=adminEmail)
-            
-            # remove any new line characters from the email address
-            secretary_email = [email.strip() for email in secretary_email.split(',')]
-            # join the emails back with comma separator
-            secretary_email = ','.join(secretary_email)
 
 
             # Send email notification to the building secretary
