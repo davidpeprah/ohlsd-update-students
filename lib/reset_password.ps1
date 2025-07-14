@@ -20,7 +20,7 @@ function generatePassword {
 function Write-Log {
     param (
         [string]$Message,
-        [string]$LogFile = "reset_password.log"
+        [string]$LogFile = "..\logs\reset_password.log"
     )
     $Timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Add-Content -Path $LogFile -Value "$Timestamp - $Message"

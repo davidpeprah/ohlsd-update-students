@@ -223,12 +223,16 @@ def send_email_notification(data: dict = None, recipient: str = None, subject: s
     if recipient:
 
         send_email_message = None
+        
+        email_template = env.get_template(template_name)
+        logger.debug(f"Using email template: {template_name}")
+        rendered_email = email_template.render(data)
 
         if with_attachment:
+
             if file_path and file_name and template_name:
                
-                email_template = env.get_template(template_name)
-                rendered_email = email_template.render(data)
+               
 
                 # Function to send email notification
                 logger.info(f"Sending email notification with attachment subject: {subject} ...")
@@ -248,9 +252,7 @@ def send_email_notification(data: dict = None, recipient: str = None, subject: s
                 logger.critical("Email template name not provided for email notification without attachment")
                 return
             
-            email_template = env.get_template(template_name)
-            rendered_email = email_template.render(data)
-
+           
             # Function to send email notification
             logger.info(f"Sending email notification without attachment subject: {subject} ...")
             logger.debug(f"Email subject: {subject}")
