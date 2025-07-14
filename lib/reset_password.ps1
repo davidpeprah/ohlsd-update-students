@@ -35,7 +35,7 @@ function generatePassword {
 
 function wordlistPassword {
     param (
-        [string]$wordlistfile
+        [string]$wordlistfile = "C:\scripts\Students\Password\WL.txt"
     )
     
     if (-not (Test-Path -Path $wordlistFile)) {
@@ -61,11 +61,7 @@ function Write-Log {
 
 
 try {
-    $configFilePath = "config\update-students.ini"
-    $config = Get-IniContent -filePath $configFilePath
-    $wordlistFile = $($config.general.wordListFile)
-
-    $NewPassword = wordlistPassword $wordlistFile
+    $NewPassword = wordlistPassword 
     # if the wordlistPassword function returns false, generate a new password
     if (-not $NewPassword) {
         generatePassword -length 14
