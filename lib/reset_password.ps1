@@ -49,8 +49,8 @@ try {
     $NewPassword = wordlistPassword 
     # if the wordlistPassword function returns false, generate a new password
     if (-not $NewPassword) {
-        generatePassword -length 14
-        $NewPassword = generatePassword -length 14
+        Write-Log "Wordlist password generation failed, generating a random password." -ForegroundColor Yellow
+        $NewPassword = generatePassword
     }
     # Check if the user exists in Active Directory
     $user = Get-ADUser -Filter {samAccountName -eq $username } | Select -ExpandProperty samAccountName
